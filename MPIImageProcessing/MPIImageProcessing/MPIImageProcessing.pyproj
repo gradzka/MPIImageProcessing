@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="ImageProcessing.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="MPIImageProcessing.py" />
     <Compile Include="Server.py">
       <SubType>Code</SubType>

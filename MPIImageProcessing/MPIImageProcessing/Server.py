@@ -31,5 +31,11 @@ def get_pi():
 def get_with_param(account_name):
     return jsonify({'Receive': str(account_name)})
 
+# import ImageProcessing as ImageProc
+# from PIL import Image
 if __name__ == '__main__':
+    # wybor skladowej (RGB) (opcja: R(0)|G(1)|B(2))
+    # INPicture = Image.open("haft.jpg")
+    # OUTPicture = ImageProc.selectionOfRGB(INPicture, 0, INPicture.height, 1)
+    # OUTPicture.save("outhaft.jpg")
     app.run(host='localhost', port=1247)
