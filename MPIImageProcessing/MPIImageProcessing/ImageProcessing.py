@@ -83,8 +83,33 @@ def gamma(INPicture, myFirst, myLast, gamma):
 
 # obrot o 90, 180, 270 (opcja: 90(0)|180(1)|270(2))
 def rotation(INPicture, myFirst, myLast, option): # (option: 90(0)|180(1)|270(2))
+    if option == 0: # 90
+        OUTpicture = Image.new("RGB",(INPicture.height, INPicture.width), (0,0,0))
+        for iterJ in range (myFirst, myLast):
+            for iterI in range (0, INPicture.width): 
+                OUTpicture.putpixel((iterJ,iterI),(INPicture.getpixel((iterI,INPicture.height - iterJ - 1))))
+    elif option == 1: # 180
+        OUTpicture = Image.new("RGB",(INPicture.width, INPicture.height), (0,0,0))
+        for iterJ in range (myFirst, myLast):
+            for iterI in range (0, INPicture.width):
+                OUTpicture.putpixel((iterI, iterJ),(INPicture.getpixel((INPicture.width - iterI - 1, INPicture.height - iterJ - 1))))
+    elif option == 2: # 270
+        OUTpicture = Image.new("RGB",(INPicture.height, INPicture.width), (0,0,0))
+        for iterJ in range (myFirst, myLast):
+            for iterI in range (0, INPicture.width):
+                OUTpicture.putpixel((iterJ, iterI),(INPicture.getpixel((INPicture.width - iterI - 1, iterJ))))
     return OUTpicture
 
 # odbicie lustrzane (opcja: pionowe(0)|poziome(1))
 def mirrorReflection(INPicture, myFirst, myLast, option):# option: vertical(0)|horizontal(1)
+    if option == 0: # vertical
+        OUTpicture = Image.new("RGB",(INPicture.width, INPicture.height), (0,0,0))
+        for iterJ in range (myFirst, myLast):
+            for iterI in range (0, INPicture.width): 
+                OUTpicture.putpixel((iterI,iterJ),(INPicture.getpixel((iterI,INPicture.height - iterJ - 1))))
+    if option == 1: # horizontal
+        OUTpicture = Image.new("RGB",(INPicture.width, INPicture.height), (0,0,0))
+        for iterJ in range (myFirst, myLast):
+            for iterI in range (0, INPicture.width): 
+                OUTpicture.putpixel((iterI,iterJ),(INPicture.getpixel((INPicture.width - iterI - 1, iterJ))))
     return OUTpicture
