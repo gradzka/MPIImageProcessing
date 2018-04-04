@@ -23,30 +23,29 @@ def not_found(error):
 def histogram():
     return jsonify({'Result': 'OK'})
 
-@app.route('/rotate', methods=['GET'])
+@app.route('/rotation', methods=['GET'])
 def rotate():
     return jsonify({'Result': 'OK'})
 
-@app.route('/reflect', methods=['GET'])
+@app.route('/reflection', methods=['GET'])
 def reflect():
     return jsonify({'Result': 'OK'})
 
 @app.route('/filter/<string:operation_name>', methods=['GET'])
 def get_with_param(operation_name):
+    #convert image to Image object
     INPicture = Image.open("teddy.jpg")  
     comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
     comm.bcast(operation_name, root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
+    #send in bcast option
+    if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma") or (operation_name == "rotation") or (operation_name == "mirrorReflection"):
+        comm.bcast(0, root=MPI.ROOT)# change first parameter to option
     OUTPicture = None
     OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
     comm.Disconnect()
     OUTPicture.save("out " + operation_name + ".jpg")
     return jsonify({'Receive': str(operation_name)})
 
-
 if __name__ == '__main__':
-    # wybor skladowej (RGB) (opcja: R(0)|G(1)|B(2))
-    #INPicture = Image.open("haft.jpg")   
-    #OUTPicture = ImageProc.mirrorReflection(INPicture, 0, INPicture.height, 1)
-    #OUTPicture.save("outhaft.jpg")
     app.run(host='localhost', port=1247)

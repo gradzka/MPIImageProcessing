@@ -16,7 +16,6 @@ def my_sum(INPicture, OUTPicture, mpi_datatype):
             OUTPicture.putpixel((iterI,iterJ),(R,G,B))
     return OUTPicture
 
-
 # histogram
 def histogram(INPixels, myFirst, myLast): # INPixels - list of pixels
     histogram = {"R":[0]*256, "G":[0]*256, "B":[0]*256}
@@ -31,7 +30,7 @@ def histogram(INPixels, myFirst, myLast): # INPixels - list of pixels
     return histogram
 
 # wybor skladowej (RGB) (opcja: R(0)|G(1)|B(2))
-def selectionOfRGB(INPicture, myFirst, myLast, RGB): # (option: R(0)|G(1)|B(2))
+def RGBSelection(INPicture, myFirst, myLast, RGB): # (option: R(0)|G(1)|B(2))
     OUTpicture = Image.new("RGB",(INPicture.width, INPicture.height), (0,0,0))
     for iterJ in range (myFirst, myLast):
         for iterI in range (0, INPicture.width):
@@ -72,7 +71,7 @@ def brightness(INPicture, myFirst, myLast, change):
     for iterJ in range (myFirst, myLast):
         for iterI in range (0, INPicture.width):
             pixel = INPicture.getpixel((iterI,iterJ))
-            OUTpicture.putpixel((iterI,iterJ),(pixel[0]+change, pixel[1]+change, pixel[2]+change))
+            OUTpicture.putpixel((iterI,iterJ),int((pixel[0]+change), int(pixel[1]+change), int(pixel[2]+change)))
     return OUTpicture
 
 # kontrast
@@ -81,7 +80,7 @@ def contrast(INPicture, myFirst, myLast, contrast):
     for iterJ in range (myFirst, myLast):
         for iterI in range (0, INPicture.width):
             pixel = INPicture.getpixel((iterI,iterJ))
-            OUTpicture.putpixel((iterI,iterJ),(((pixel[0] - 128) * contrast) + 128, ((pixel[1] - 128) * contrast) + 128, ((pixel[2] - 128) * contrast) + 128))
+            OUTpicture.putpixel((iterI,iterJ),((int((pixel[0] - 128) * contrast) + 128), (int((pixel[1] - 128) * contrast) + 128), (int((pixel[2] - 128) * contrast) + 128)))
     return OUTpicture
 
 # gamma
@@ -125,3 +124,14 @@ def mirrorReflection(INPicture, myFirst, myLast, option):# option: vertical(0)|h
             for iterI in range (0, INPicture.width): 
                 OUTpicture.putpixel((iterI,iterJ),(INPicture.getpixel((INPicture.width - iterI - 1, iterJ))))
     return OUTpicture
+
+imageProcessing = {"histogram" : histogram,
+           "rotation" : rotation,
+           "reflection" : mirrorReflection,
+           "RGBSelection" : RGBSelection,
+           "negative" : negative,
+           "shadesOfGrey" : shadesOfGrey,
+           "brightness" : brightness,
+           "contrast" : contrast,
+           "gamma" : gamma,
+}
