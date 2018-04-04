@@ -5,6 +5,18 @@ from PIL import Image
 import math
 import copy
 
+def my_sum(INPicture, OUTPicture, mpi_datatype):    
+    for iterJ in range (0, INPicture.height):
+        for iterI in range (0, INPicture.width):
+            pixelIN = INPicture.getpixel((iterI,iterJ))
+            pixelOUT = OUTPicture.getpixel((iterI,iterJ))
+            R = min(255, pixelIN[0]+pixelOUT[0])
+            G = min(255, pixelIN[1]+pixelOUT[1])
+            B = min(255, pixelIN[2]+pixelOUT[2])
+            OUTPicture.putpixel((iterI,iterJ),(R,G,B))
+    return OUTPicture
+
+
 # histogram
 def histogram(INPixels, myFirst, myLast): # INPixels - list of pixels
     histogram = {"R":[0]*256, "G":[0]*256, "B":[0]*256}

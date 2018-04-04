@@ -1,19 +1,23 @@
 from mpi4py import MPI
 import numpy
+import ImageProcessing as ImageProc
+from PIL import Image
 
 comm = MPI.Comm.Get_parent()
 size = comm.Get_size()
 rank = comm.Get_rank()
 
-print('OK', rank)
+INPicture = None
+operation_name = None
 
-N = numpy.array(0, dtype='i')
-comm.Bcast([N, MPI.INT], root=0)
-h = 1.0 / N; s = 0.0
-for i in range(rank, N, size):
-    x = h * (i + 0.5)
-    s += 4.0 / (1.0 + x**2)
-PI = numpy.array(s * h, dtype='d')
-comm.Reduce([PI, MPI.DOUBLE], None, op=MPI.SUM, root=0)
+operation_name=comm.bcast(operation_name, root=0)
+INPicture=comm.bcast(INPicture, root=0)
+
+myFirst = int((rank * INPicture.height) / size)
+myLast = int(((rank+1) * INPicture.height) / size)
+print(rank, INPicture.width, INPicture.height, myFirst, myLast)
+OUTPicture = ImageProc.negative(INPicture, myFirst, myLast)
+my_op = MPI.Op.Create(ImageProc.my_sum)
+OUTPicture=comm.reduce(OUTPicture, op=my_op, root=0)
 
 comm.Disconnect()
