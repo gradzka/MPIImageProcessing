@@ -7,7 +7,7 @@ The main aim of project is creating system to distributed image processing. Inpu
 ## Description
 System is based on client-server architecture &mdash; client is implemented as mobile application (it requests image processing), server (REST server) and calculation node (processes selected part od image) are console applications.
 
-<p align="center"><img src="https://github.com/kazimierczak-robert/MPIImageProcessing/Resources/System Ang.png"></p>
+<p align="center"><img src="https://github.com/kazimierczak-robert/MPIImageProcessing/blob/master/Resources/SystemAng.png"></p>
 <p align="center"><em>Figure 1. Principle of image processing</em></p>
 
 ### Selected image processing algorithms
