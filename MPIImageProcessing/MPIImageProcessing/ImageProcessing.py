@@ -16,6 +16,14 @@ def my_sum(INPicture, OUTPicture, mpi_datatype):
             OUTPicture.putpixel((iterI,iterJ),(R,G,B))
     return OUTPicture
 
+def my_histogram_sum(histogram1, histogram2, mpi_datatype):
+    histogram = {"R":[0]*256, "G":[0]*256, "B":[0]*256}
+    for iter in range(0, 256):
+        histogram["R"][iter] = histogram1["R"][iter] + histogram2["R"][iter] # R
+        histogram["G"][iter] = histogram1["G"][iter] + histogram2["G"][iter] # G
+        histogram["B"][iter] = histogram1["B"][iter] + histogram2["B"][iter] # B
+    return histogram
+
 # histogram
 def histogram(INPixels, myFirst, myLast): # INPixels - list of pixels
     histogram = {"R":[0]*256, "G":[0]*256, "B":[0]*256}
@@ -71,7 +79,7 @@ def brightness(INPicture, myFirst, myLast, change):
     for iterJ in range (myFirst, myLast):
         for iterI in range (0, INPicture.width):
             pixel = INPicture.getpixel((iterI,iterJ))
-            OUTpicture.putpixel((iterI,iterJ),int((pixel[0]+change), int(pixel[1]+change), int(pixel[2]+change)))
+            OUTpicture.putpixel((iterI,iterJ),(int(pixel[0]+change), int(pixel[1]+change), int(pixel[2]+change)))
     return OUTpicture
 
 # kontrast
@@ -127,7 +135,7 @@ def mirrorReflection(INPicture, myFirst, myLast, option):# option: vertical(0)|h
 
 imageProcessing = {"histogram" : histogram,
            "rotation" : rotation,
-           "reflection" : mirrorReflection,
+           "mirrorReflection" : mirrorReflection,
            "RGBSelection" : RGBSelection,
            "negative" : negative,
            "shadesOfGrey" : shadesOfGrey,

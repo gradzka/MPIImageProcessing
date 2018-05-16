@@ -19,6 +19,8 @@ myLast = int(((rank+1) * INPicture.height) / size)
 #OUTPicture = ImageProc.negative(INPicture, myFirst, myLast)
 
 if operation_name == "histogram":   
+    myFirst = int((rank * INPicture.width*INPicture.height) / size)
+    myLast = int(((rank+1) * INPicture.width*INPicture.height) / size)
     histogram = ImageProc.imageProcessing[operation_name](list(INPicture.getdata()),myFirst,myLast)
 elif (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma") or (operation_name == "rotation") or (operation_name == "mirrorReflection"):
     option = None
@@ -28,7 +30,8 @@ elif  (operation_name == "negative") or (operation_name == "shadesOfGrey"):
     OUTPicture = ImageProc.imageProcessing[operation_name](INPicture,myFirst,myLast)
 
 if operation_name == "histogram":
-    histogram = comm.reduce(histogram, op=MPI.SUM, root=0)
+    my_op = MPI.Op.Create(ImageProc.my_histogram_sum)
+    histogram = comm.reduce(histogram, op=my_op, root=0)
 else: 
     my_op = MPI.Op.Create(ImageProc.my_sum)
     OUTPicture=comm.reduce(OUTPicture, op=my_op, root=0)
