@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, abort, request, make_response
+from flask import Flask, jsonify, abort, request, make_response, send_file
 from mpi4py import MPI
 import numpy
 import sys
@@ -6,46 +6,182 @@ import sys
 import ImageProcessing as ImageProc
 from PIL import Image
 
+from werkzeug.utils import secure_filename
+from io import BytesIO
+
 app = Flask(__name__, static_url_path="")
-print('Iam')
-sys.stdout.flush()
+
 my_op = MPI.Op.Create(ImageProc.my_sum)
 
 @app.errorhandler(400)
 def bad_request(error):
-    return make_response(jsonify({'error': 'Bad request'}), 400)
+    return make_response(jsonify({'Error': 'Bad request'}), 400)
 
 @app.errorhandler(404)
 def not_found(error):
-    return make_response(jsonify({'error': 'Not found'}), 404)
-    
-@app.route('/histogram', methods=['GET'])
+    return make_response(jsonify({'Error': 'Not found'}), 404)
+
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+
+def allowed_file(filename):
+    return '.' in filename and \
+        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def checkImage(request):
+    if 'file' not in request.files:
+        return 'No file part'
+    elif request.files['file'].filename == '':
+        return 'No selected file'
+    elif not allowed_file(request.files['file'].filename):
+        return 'Bad extension'
+    else:
+        return ''
+
+def is_number(s, checkingInt):
+    try:
+        if checkingInt:
+            int(s)
+            return True
+        else:
+            float(s)
+            return True
+    except ValueError:
+        return False
+
+def checkParam(request, param, checkingInt):
+    if param not in request.form:
+        return 'No param part'
+    elif request.form[param] == '':
+        return 'Empty param'
+    elif (not is_number(request.form[param], checkingInt)):
+        return 'Param must be digit'
+    else:
+        return ''
+
+def serve_pil_image(pil_img, filename):
+    byte_io = BytesIO()
+    pil_img.save(byte_io, filename.rsplit('.', 1)[1].lower())
+    byte_io.seek(0)
+    return send_file(byte_io, mimetype='image/'+filename.rsplit('.', 1)[1].lower())
+
+@app.route('/histogram', methods=['POST'])
 def histogram():
-    return jsonify({'Result': 'OK'})
+    error = checkImage(request)
+    if error != '':
+        return jsonify({'Error': error})
+    
+    file = request.files['file']
+    INPicture = Image.open(file.stream)
 
-@app.route('/rotation', methods=['GET'])
-def rotate():
-    return jsonify({'Result': 'OK'})
-
-@app.route('/reflection', methods=['GET'])
-def reflect():
-    return jsonify({'Result': 'OK'})
-
-@app.route('/filter/<string:operation_name>', methods=['GET'])
-def get_with_param(operation_name):
-    #convert image to Image object
-    INPicture = Image.open("teddy.jpg")  
     comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
-    comm.bcast(operation_name, root=MPI.ROOT)
+    comm.bcast("histogram", root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
-    #send in bcast option
-    if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma") or (operation_name == "rotation") or (operation_name == "mirrorReflection"):
-        comm.bcast(0, root=MPI.ROOT)# change first parameter to option
+    histogram = None
+    #TODO
+    histogram=comm.reduce(None, op=MPI.SUM, root=MPI.ROOT)
+    return jsonify({'Result': histogram})
+
+@app.route('/rotation', methods=['POST'])
+def rotate():
+    error = checkImage(request)
+    if error != '':
+        return jsonify({'Error': error})
+    
+    error = checkParam(request, "option", True)
+    if error != '':
+        return jsonify({'Error': error})
+
+    option = int(request.form['option'])
+    if option<0 or option>2:
+        return jsonify({'Error': 'Invalid option value'})
+
+    file = request.files['file']
+    INPicture = Image.open(file.stream)
+
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm.bcast("rotation", root=MPI.ROOT)
+    comm.bcast(INPicture, root=MPI.ROOT)
+    comm.bcast(option, root=MPI.ROOT)
+
     OUTPicture = None
     OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
     comm.Disconnect()
-    OUTPicture.save("out " + operation_name + ".jpg")
-    return jsonify({'Receive': str(operation_name)})
+
+    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+
+@app.route('/reflection', methods=['POST'])
+def reflect():
+    error = checkImage(request)
+    if error != '':
+        return jsonify({'Error': error})
+    
+    error = checkParam(request, "option", True)
+    if error != '':
+        return jsonify({'Error': error})
+
+    option = int(request.form['option'])
+    if option<0 or option>1:
+        return jsonify({'Error': 'Invalid option value'})
+
+    file = request.files['file']
+    INPicture = Image.open(file.stream)
+
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm.bcast("mirrorReflection", root=MPI.ROOT)
+    comm.bcast(INPicture, root=MPI.ROOT)
+    comm.bcast(option, root=MPI.ROOT)
+
+    OUTPicture = None
+    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
+    comm.Disconnect()
+
+    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+
+@app.route('/filter/<string:operation_name>', methods=['POST'])
+def filter(operation_name):
+    if (operation_name != "RGBSelection") and (operation_name != "brightness") and (operation_name != "contrast") and (operation_name != "gamma") and (operation_name != "negative") and (operation_name != "shadesOfGrey"):
+       return not_found(404)
+
+    error = checkImage(request)
+    if error != '':
+        return jsonify({'Error': error})
+    
+    option = None
+
+    if (operation_name == "RGBSelection") or (operation_name == "brightness"):
+        error = checkParam(request, "option", True)
+        if error != '':
+            return jsonify({'Error': error})
+        option = int(request.form['option'])
+        if (operation_name == "RGBSelection") and (option<0 or option>2):
+            return jsonify({'Error': 'Invalid option value'})
+        if (operation_name == "brightness") and (option<-255 or option>255):
+            return jsonify({'Error': 'Invalid option value'})
+
+    if (operation_name == "contrast") or (operation_name == "gamma"):
+        error = checkParam(request, "option", False)
+        if error != '':
+            return jsonify({'Error': error})
+        option = float(request.form['option'])
+        if option<0.1 or option>10:
+            return jsonify({'Error': 'Invalid option value'})
+
+    file = request.files['file']
+    INPicture = Image.open(file.stream)
+
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm.bcast(operation_name, root=MPI.ROOT)
+    comm.bcast(INPicture, root=MPI.ROOT)
+
+    #send in bcast option
+    if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma"):
+        comm.bcast(option, root=MPI.ROOT)
+
+    OUTPicture = None
+    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
+    comm.Disconnect()
+
+    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
 
 if __name__ == '__main__':
     app.run(host='localhost', port=1247)
