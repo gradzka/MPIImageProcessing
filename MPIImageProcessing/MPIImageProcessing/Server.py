@@ -12,6 +12,7 @@ from io import BytesIO
 app = Flask(__name__, static_url_path="")
 
 my_op = MPI.Op.Create(ImageProc.my_sum)
+my_opH = MPI.Op.Create(ImageProc.my_histogram_sum)
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -77,8 +78,7 @@ def histogram():
     comm.bcast("histogram", root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
     histogram = None
-    #TODO
-    histogram=comm.reduce(None, op=MPI.SUM, root=MPI.ROOT)
+    histogram=comm.reduce(None, op=my_opH, root=MPI.ROOT)
     return jsonify({'Result': histogram})
 
 @app.route('/rotation', methods=['POST'])
