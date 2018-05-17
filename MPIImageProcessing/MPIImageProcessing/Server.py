@@ -8,6 +8,7 @@ from PIL import Image
 
 from werkzeug.utils import secure_filename
 from io import BytesIO
+import psutil
 
 app = Flask(__name__, static_url_path="")
 
@@ -61,9 +62,34 @@ def checkParam(request, param, checkingInt):
 
 def serve_pil_image(pil_img, filename):
     byte_io = BytesIO()
-    pil_img.save(byte_io, filename.rsplit('.', 1)[1].lower())
+    ext = filename.rsplit('.', 1)[1].lower()
+    if ext == 'jpg':
+        ext = 'jpeg'
+    pil_img.save(byte_io, ext)
     byte_io.seek(0)
-    return send_file(byte_io, mimetype='image/'+filename.rsplit('.', 1)[1].lower())
+    return send_file(byte_io, mimetype='image/'+ext)
+
+def getMaxProcsNumber(request):
+    maxProcsNumber = 1
+    error = checkParam(request, "proc", True)
+    if error == '':
+        maxProcsNumber = int(request.form['proc'])
+        if maxProcsNumber<1 or maxProcsNumber>8:
+            maxProcsNumber = 1
+    return maxProcsNumber
+
+def verification(maxProcsNumber):
+    numberOfProcesses = 0;
+    for pid in psutil.pids():
+        p = psutil.Process(pid)
+        if p.name() == "python.exe" and len(p.cmdline()) > 1 and "MPIImageProcessing.py" in p.cmdline()[1]:
+            numberOfProcesses+=1
+    print('ProcNo: '+str(numberOfProcesses))
+    sys.stdout.flush()
+    if (maxProcsNumber+numberOfProcesses) > 64:
+        return 'Server is busy'
+    else:
+        return ''
 
 @app.route('/histogram', methods=['POST'])
 def histogram():
@@ -71,10 +97,15 @@ def histogram():
     if error != '':
         return jsonify({'Error': error})
     
+    maxProcsNumber = getMaxProcsNumber(request)
+    error = verification(maxProcsNumber)
+    if error != '':
+        return jsonify({'Error': error})
+
     file = request.files['file']
     INPicture = Image.open(file.stream)
 
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
     comm.bcast("histogram", root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
     histogram = None
@@ -95,10 +126,15 @@ def rotate():
     if option<0 or option>2:
         return jsonify({'Error': 'Invalid option value'})
 
+    maxProcsNumber = getMaxProcsNumber(request)
+    error = verification(maxProcsNumber)
+    if error != '':
+        return jsonify({'Error': error})
+
     file = request.files['file']
     INPicture = Image.open(file.stream)
 
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
     comm.bcast("rotation", root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
     comm.bcast(option, root=MPI.ROOT)
@@ -123,10 +159,15 @@ def reflect():
     if option<0 or option>1:
         return jsonify({'Error': 'Invalid option value'})
 
+    maxProcsNumber = getMaxProcsNumber(request)
+    error = verification(maxProcsNumber)
+    if error != '':
+        return jsonify({'Error': error})
+
     file = request.files['file']
     INPicture = Image.open(file.stream)
 
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
     comm.bcast("mirrorReflection", root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
     comm.bcast(option, root=MPI.ROOT)
@@ -166,10 +207,15 @@ def filter(operation_name):
         if option<0.1 or option>10:
             return jsonify({'Error': 'Invalid option value'})
 
+    maxProcsNumber = getMaxProcsNumber(request)
+    error = verification(maxProcsNumber)
+    if error != '':
+        return jsonify({'Error': error})
+
     file = request.files['file']
     INPicture = Image.open(file.stream)
 
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=4)
+    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
     comm.bcast(operation_name, root=MPI.ROOT)
     comm.bcast(INPicture, root=MPI.ROOT)
 
