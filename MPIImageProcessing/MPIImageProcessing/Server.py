@@ -93,141 +93,153 @@ def verification(maxProcsNumber):
 
 @app.route('/histogram', methods=['POST'])
 def histogram():
-    error = checkImage(request)
-    if error != '':
-        return jsonify({'Error': error})
+    try:
+        error = checkImage(request)
+        if error != '':
+            return jsonify({'Error': error})
     
-    maxProcsNumber = getMaxProcsNumber(request)
-    error = verification(maxProcsNumber)
-    if error != '':
-        return jsonify({'Error': error})
+        maxProcsNumber = getMaxProcsNumber(request)
+        error = verification(maxProcsNumber)
+        if error != '':
+            return jsonify({'Error': error})
 
-    file = request.files['file']
-    INPicture = Image.open(file.stream)
+        file = request.files['file']
+        INPicture = Image.open(file.stream)
 
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-    comm.bcast("histogram", root=MPI.ROOT)
-    comm.bcast(INPicture, root=MPI.ROOT)
-    histogram = None
-    histogram=comm.reduce(None, op=my_opH, root=MPI.ROOT)
-    return jsonify({'Result': histogram})
+        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
+        comm.bcast("histogram", root=MPI.ROOT)
+        comm.bcast(INPicture, root=MPI.ROOT)
+        histogram = None
+        histogram=comm.reduce(None, op=my_opH, root=MPI.ROOT)
+        return jsonify({'Result': histogram})
+    except:
+        return jsonify({'Error': 'Server error'})
 
 @app.route('/rotation', methods=['POST'])
 def rotate():
-    error = checkImage(request)
-    if error != '':
-        return jsonify({'Error': error})
+    try:
+        error = checkImage(request)
+        if error != '':
+            return jsonify({'Error': error})
     
-    error = checkParam(request, "option", True)
-    if error != '':
-        return jsonify({'Error': error})
-
-    option = int(request.form['option'])
-    if option<0 or option>2:
-        return jsonify({'Error': 'Invalid option value'})
-
-    maxProcsNumber = getMaxProcsNumber(request)
-    error = verification(maxProcsNumber)
-    if error != '':
-        return jsonify({'Error': error})
-
-    file = request.files['file']
-    INPicture = Image.open(file.stream)
-
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-    comm.bcast("rotation", root=MPI.ROOT)
-    comm.bcast(INPicture, root=MPI.ROOT)
-    comm.bcast(option, root=MPI.ROOT)
-
-    OUTPicture = None
-    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-    comm.Disconnect()
-
-    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
-
-@app.route('/reflection', methods=['POST'])
-def reflect():
-    error = checkImage(request)
-    if error != '':
-        return jsonify({'Error': error})
-    
-    error = checkParam(request, "option", True)
-    if error != '':
-        return jsonify({'Error': error})
-
-    option = int(request.form['option'])
-    if option<0 or option>1:
-        return jsonify({'Error': 'Invalid option value'})
-
-    maxProcsNumber = getMaxProcsNumber(request)
-    error = verification(maxProcsNumber)
-    if error != '':
-        return jsonify({'Error': error})
-
-    file = request.files['file']
-    INPicture = Image.open(file.stream)
-
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-    comm.bcast("mirrorReflection", root=MPI.ROOT)
-    comm.bcast(INPicture, root=MPI.ROOT)
-    comm.bcast(option, root=MPI.ROOT)
-
-    OUTPicture = None
-    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-    comm.Disconnect()
-
-    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
-
-@app.route('/filter/<string:operation_name>', methods=['POST'])
-def filter(operation_name):
-    if (operation_name != "RGBSelection") and (operation_name != "brightness") and (operation_name != "contrast") and (operation_name != "gamma") and (operation_name != "negative") and (operation_name != "shadesOfGrey"):
-       return not_found(404)
-
-    error = checkImage(request)
-    if error != '':
-        return jsonify({'Error': error})
-    
-    option = None
-
-    if (operation_name == "RGBSelection") or (operation_name == "brightness"):
         error = checkParam(request, "option", True)
         if error != '':
             return jsonify({'Error': error})
+
         option = int(request.form['option'])
-        if (operation_name == "RGBSelection") and (option<0 or option>2):
-            return jsonify({'Error': 'Invalid option value'})
-        if (operation_name == "brightness") and (option<-255 or option>255):
+        if option<0 or option>2:
             return jsonify({'Error': 'Invalid option value'})
 
-    if (operation_name == "contrast") or (operation_name == "gamma"):
-        error = checkParam(request, "option", False)
+        maxProcsNumber = getMaxProcsNumber(request)
+        error = verification(maxProcsNumber)
         if error != '':
             return jsonify({'Error': error})
-        option = float(request.form['option'])
-        if option<0.1 or option>10:
-            return jsonify({'Error': 'Invalid option value'})
 
-    maxProcsNumber = getMaxProcsNumber(request)
-    error = verification(maxProcsNumber)
-    if error != '':
-        return jsonify({'Error': error})
+        file = request.files['file']
+        INPicture = Image.open(file.stream)
 
-    file = request.files['file']
-    INPicture = Image.open(file.stream)
-
-    comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-    comm.bcast(operation_name, root=MPI.ROOT)
-    comm.bcast(INPicture, root=MPI.ROOT)
-
-    #send in bcast option
-    if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma"):
+        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
+        comm.bcast("rotation", root=MPI.ROOT)
+        comm.bcast(INPicture, root=MPI.ROOT)
         comm.bcast(option, root=MPI.ROOT)
 
-    OUTPicture = None
-    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-    comm.Disconnect()
+        OUTPicture = None
+        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
+        comm.Disconnect()
 
-    return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+    except:
+        return jsonify({'Error': 'Server error'})
+
+@app.route('/reflection', methods=['POST'])
+def reflect():
+    try:
+        error = checkImage(request)
+        if error != '':
+            return jsonify({'Error': error})
+    
+        error = checkParam(request, "option", True)
+        if error != '':
+            return jsonify({'Error': error})
+
+        option = int(request.form['option'])
+        if option<0 or option>1:
+            return jsonify({'Error': 'Invalid option value'})
+
+        maxProcsNumber = getMaxProcsNumber(request)
+        error = verification(maxProcsNumber)
+        if error != '':
+            return jsonify({'Error': error})
+
+        file = request.files['file']
+        INPicture = Image.open(file.stream)
+
+        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
+        comm.bcast("mirrorReflection", root=MPI.ROOT)
+        comm.bcast(INPicture, root=MPI.ROOT)
+        comm.bcast(option, root=MPI.ROOT)
+
+        OUTPicture = None
+        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
+        comm.Disconnect()
+
+        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+    except:
+        return jsonify({'Error': 'Server error'})
+
+@app.route('/filter/<string:operation_name>', methods=['POST'])
+def filter(operation_name):
+    try:
+        if (operation_name != "RGBSelection") and (operation_name != "brightness") and (operation_name != "contrast") and (operation_name != "gamma") and (operation_name != "negative") and (operation_name != "shadesOfGrey"):
+            return not_found(404)
+
+        error = checkImage(request)
+        if error != '':
+            return jsonify({'Error': error})
+    
+        option = None
+
+        if (operation_name == "RGBSelection") or (operation_name == "brightness"):
+            error = checkParam(request, "option", True)
+            if error != '':
+                return jsonify({'Error': error})
+            option = int(request.form['option'])
+            if (operation_name == "RGBSelection") and (option<0 or option>2):
+                return jsonify({'Error': 'Invalid option value'})
+            if (operation_name == "brightness") and (option<-255 or option>255):
+                return jsonify({'Error': 'Invalid option value'})
+
+        if (operation_name == "contrast") or (operation_name == "gamma"):
+            error = checkParam(request, "option", False)
+            if error != '':
+                return jsonify({'Error': error})
+            option = float(request.form['option'])
+            if option<0.1 or option>10:
+                return jsonify({'Error': 'Invalid option value'})
+
+        maxProcsNumber = getMaxProcsNumber(request)
+        error = verification(maxProcsNumber)
+        if error != '':
+            return jsonify({'Error': error})
+
+        file = request.files['file']
+        INPicture = Image.open(file.stream)
+
+        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
+        comm.bcast(operation_name, root=MPI.ROOT)
+        comm.bcast(INPicture, root=MPI.ROOT)
+
+        #send in bcast option
+        if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma"):
+            comm.bcast(option, root=MPI.ROOT)
+
+        OUTPicture = None
+        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
+        comm.Disconnect()
+
+        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+    except:
+        return jsonify({'Error': 'Server error'})
 
 if __name__ == '__main__':
     app.run(host='localhost', port=1247)
