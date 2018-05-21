@@ -1,19 +1,14 @@
 from flask import Flask, jsonify, abort, request, make_response, send_file
-from mpi4py import MPI
-import numpy
 import sys
-
-import ImageProcessing as ImageProc
 from PIL import Image
-
 from werkzeug.utils import secure_filename
 from io import BytesIO
 import psutil
+import datetime
+import subprocess
+import os
 
 app = Flask(__name__, static_url_path="")
-
-my_op = MPI.Op.Create(ImageProc.my_sum)
-my_opH = MPI.Op.Create(ImageProc.my_histogram_sum)
 
 @app.errorhandler(400)
 def bad_request(error):
@@ -23,7 +18,17 @@ def bad_request(error):
 def not_found(error):
     return make_response(jsonify({'Error': 'Not found'}), 404)
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif'])
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'bmp'])
+
+def deleteFile(file):
+    if os.path.isfile(file):
+        os.remove(file)
+
+def getExtension(filename):
+    ext = filename.rsplit('.', 1)[1].lower()
+    if ext == 'jpg':
+        ext = 'jpeg'
+    return ext
 
 def allowed_file(filename):
     return '.' in filename and \
@@ -62,9 +67,7 @@ def checkParam(request, param, checkingInt):
 
 def serve_pil_image(pil_img, filename):
     byte_io = BytesIO()
-    ext = filename.rsplit('.', 1)[1].lower()
-    if ext == 'jpg':
-        ext = 'jpeg'
+    ext = getExtension(filename)
     pil_img.save(byte_io, ext)
     byte_io.seek(0)
     return send_file(byte_io, mimetype='image/'+ext)
@@ -106,11 +109,18 @@ def histogram():
         file = request.files['file']
         INPicture = Image.open(file.stream)
 
-        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-        comm.bcast("histogram", root=MPI.ROOT)
-        comm.bcast(INPicture, root=MPI.ROOT)
-        histogram = None
-        histogram=comm.reduce(None, op=my_opH, root=MPI.ROOT)
+        ext = getExtension(file.filename)
+        path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
+        INPicture.save(path)
+        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "histogram", str(maxProcsNumber)])
+
+        deleteFile(path)
+        file = open("out_" + path + ".json", "r") 
+        histogram = file.read()
+        file.close()
+
+        deleteFile("out_" + path + ".json")
+
         return jsonify({'Result': histogram})
     except:
         return jsonify({'Error': 'Server error'})
@@ -137,18 +147,21 @@ def rotate():
 
         file = request.files['file']
         INPicture = Image.open(file.stream)
+        
+        ext = getExtension(file.filename)
+        path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
+        INPicture.save(path)
+        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "rotation", str(maxProcsNumber), str(option)])
+        deleteFile(path)
+        OUTPicture = Image.open("out_" + path)
 
-        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-        comm.bcast("rotation", root=MPI.ROOT)
-        comm.bcast(INPicture, root=MPI.ROOT)
-        comm.bcast(option, root=MPI.ROOT)
+        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        OUTPicture.close()
 
-        OUTPicture = None
-        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-        comm.Disconnect()
+        deleteFile("out_" + path)
 
-        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
-    except:
+        return result
+    except Exception as e:
         return jsonify({'Error': 'Server error'})
 
 @app.route('/reflection', methods=['POST'])
@@ -174,16 +187,20 @@ def reflect():
         file = request.files['file']
         INPicture = Image.open(file.stream)
 
-        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-        comm.bcast("mirrorReflection", root=MPI.ROOT)
-        comm.bcast(INPicture, root=MPI.ROOT)
-        comm.bcast(option, root=MPI.ROOT)
+        ext = getExtension(file.filename)
+        path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
+        INPicture.save(path)
+        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "mirrorReflection", str(maxProcsNumber), str(option)])
+        
+        deleteFile(path)
+        OUTPicture = Image.open("out_" + path)
+        
+        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        OUTPicture.close()
 
-        OUTPicture = None
-        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-        comm.Disconnect()
+        deleteFile("out_" + path)
 
-        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        return result
     except:
         return jsonify({'Error': 'Server error'})
 
@@ -225,19 +242,24 @@ def filter(operation_name):
         file = request.files['file']
         INPicture = Image.open(file.stream)
 
-        comm = MPI.COMM_SELF.Spawn(sys.executable, args=['MPIImageProcessing.py'], maxprocs=maxProcsNumber)
-        comm.bcast(operation_name, root=MPI.ROOT)
-        comm.bcast(INPicture, root=MPI.ROOT)
+        ext = getExtension(file.filename)
+        path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
+        INPicture.save(path)
 
-        #send in bcast option
         if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma"):
-            comm.bcast(option, root=MPI.ROOT)
+            subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, operation_name, str(maxProcsNumber), str(option)])
+        else:
+            subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, operation_name, str(maxProcsNumber)])
+        
+        deleteFile(path)
+        OUTPicture = Image.open("out_" + path)
+        
+        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        OUTPicture.close()
 
-        OUTPicture = None
-        OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-        comm.Disconnect()
+        deleteFile("out_" + path)
 
-        return serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        return result
     except:
         return jsonify({'Error': 'Server error'})
 
