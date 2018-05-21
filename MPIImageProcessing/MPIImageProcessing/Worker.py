@@ -47,7 +47,9 @@ def Work():
                 if action == "histogram":
                     my_op = MPI.Op.Create(ImageProc.my_histogram_sum)
                     histogram = comm.reduce(None, op=my_op, root=MPI.ROOT)
-                    serializedHistogram = json.dumps(histogram.__dict__)
+                    serializedHistogram = json.dumps(histogram)
+                    with open("OUT_"+sys.argv[1]+".json", "w") as file:
+                        file.write(serializedHistogram)
                 else: 
                     OUTPicture = None
                     my_op = MPI.Op.Create(ImageProc.my_sum)
