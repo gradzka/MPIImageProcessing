@@ -22,7 +22,7 @@ System is based on client-server architecture &mdash; client is implemented as m
 - mirror reflection
 
 ## Implementation assumptions
-- mobile app: Android 5.0+, Kotlin, Android Studio 3.0
+- mobile app: Android 5.0+, Kotlin, Android Studio 3.0 (https://github.com/Tiamoon/MobileImageProcessing)
 - server app: console app, python 3.6, Visual Studio 2017, REST architecture
 - calculation node app: console app, python 3.6, Visual Studio 2017, MPI standard
 
