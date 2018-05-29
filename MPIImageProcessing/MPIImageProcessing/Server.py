@@ -18,7 +18,7 @@ def bad_request(error):
 def not_found(error):
     return make_response(jsonify({'Error': 'Not found'}), 404)
 
-ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'gif', 'bmp'])
+ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg', 'bmp'])
 
 def deleteFile(file):
     if os.path.isfile(file):
@@ -87,8 +87,6 @@ def verification(maxProcsNumber):
         p = psutil.Process(pid)
         if p.name() == "python.exe" and len(p.cmdline()) > 1 and "MPIImageProcessing.py" in p.cmdline()[1]:
             numberOfProcesses+=1
-    print('ProcNo: '+str(numberOfProcesses))
-    sys.stdout.flush()
     if (maxProcsNumber+numberOfProcesses) > 64:
         return 'Server is busy'
     else:
@@ -263,5 +261,32 @@ def filter(operation_name):
     except:
         return jsonify({'Error': 'Server error'})
 
+from netifaces import interfaces, ifaddresses, AF_INET
+
+def ip4_addresses():
+    ip_list = []
+    for interface in interfaces():
+        if ifaddresses(interface).get(AF_INET) != None:
+            for link in ifaddresses(interface).get(AF_INET):
+                if link.get('addr') != None:
+                    ip_list.append(link.get('addr'))
+    return ip_list
+
 if __name__ == '__main__':
-    app.run(host='localhost', port=1247)
+    ip_list = ip4_addresses()
+    if len(ip_list) > 0:
+        chosenIPAddr = ""
+        while chosenIPAddr == "": 
+            i = 0;
+            for ipAddr in ip_list:
+                print(i, '-', ipAddr)
+                i+=1
+            data = input("Choose network interface: ")
+            print('')
+            if is_number(data, True):
+                option = int(data)
+                if option >= 0 and option < len(ip_list):
+                    chosenIPAddr = ip_list[option]
+        app.run(host=chosenIPAddr, port=1247, threaded=True)
+    else:
+        print('No network interface available!')
