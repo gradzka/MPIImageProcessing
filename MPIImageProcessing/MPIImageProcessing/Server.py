@@ -113,11 +113,11 @@ def histogram():
         subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "histogram", str(maxProcsNumber)])
 
         deleteFile(path)
-        file = open("out_" + path + ".json", "r") 
+        file = open("OUT_" + path + ".json", "r") 
         histogram = file.read()
         file.close()
 
-        deleteFile("out_" + path + ".json")
+        deleteFile("OUT_" + path + ".json")
 
         return jsonify({'Result': histogram})
     except:
@@ -151,12 +151,12 @@ def rotate():
         INPicture.save(path)
         subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "rotation", str(maxProcsNumber), str(option)])
         deleteFile(path)
-        OUTPicture = Image.open("out_" + path)
+        OUTPicture = Image.open("OUT_" + path)
 
-        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        result = serve_pil_image(OUTPicture, "OUT_" + secure_filename(file.filename))
         OUTPicture.close()
 
-        deleteFile("out_" + path)
+        deleteFile("OUT_" + path)
 
         return result
     except Exception as e:
@@ -191,12 +191,12 @@ def reflect():
         subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "mirrorReflection", str(maxProcsNumber), str(option)])
         
         deleteFile(path)
-        OUTPicture = Image.open("out_" + path)
+        OUTPicture = Image.open("OUT_" + path)
         
-        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        result = serve_pil_image(OUTPicture, "OUT_" + secure_filename(file.filename))
         OUTPicture.close()
 
-        deleteFile("out_" + path)
+        deleteFile("OUT_" + path)
 
         return result
     except:
@@ -250,12 +250,12 @@ def filter(operation_name):
             subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, operation_name, str(maxProcsNumber)])
         
         deleteFile(path)
-        OUTPicture = Image.open("out_" + path)
+        OUTPicture = Image.open("OUT_" + path)
         
-        result = serve_pil_image(OUTPicture, "out_" + secure_filename(file.filename))
+        result = serve_pil_image(OUTPicture, "OUT_" + secure_filename(file.filename))
         OUTPicture.close()
 
-        deleteFile("out_" + path)
+        deleteFile("OUT_" + path)
 
         return result
     except:
