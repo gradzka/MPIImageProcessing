@@ -12,7 +12,10 @@ app = Flask(__name__, static_url_path="")
 
 @app.errorhandler(400)
 def bad_request(error):
-    return make_response(jsonify({'Error': 'Bad request'}), 400)
+    if error == "":
+        return make_response(jsonify({'Error': 'Bad request'}), 400)
+    else:
+        return make_response(jsonify({'Error': error}), 400)		
 
 @app.errorhandler(404)
 def not_found(error):
@@ -97,12 +100,12 @@ def histogram():
     try:
         error = checkImage(request)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
     
         maxProcsNumber = getMaxProcsNumber(request)
         error = verification(maxProcsNumber)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         file = request.files['file']
         INPicture = Image.open(file.stream)
@@ -121,27 +124,27 @@ def histogram():
 
         return jsonify({'Result': histogram})
     except:
-        return jsonify({'Error': 'Server error'})
+        return bad_request('Server error')
 
 @app.route('/rotation', methods=['POST'])
 def rotate():
     try:
         error = checkImage(request)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
     
         error = checkParam(request, "option", True)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         option = int(request.form['option'])
         if option<0 or option>2:
-            return jsonify({'Error': 'Invalid option value'})
+            return bad_request('Invalid option value')
 
         maxProcsNumber = getMaxProcsNumber(request)
         error = verification(maxProcsNumber)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         file = request.files['file']
         INPicture = Image.open(file.stream)
@@ -160,27 +163,27 @@ def rotate():
 
         return result
     except Exception as e:
-        return jsonify({'Error': 'Server error'})
+        return bad_request('Server error')
 
 @app.route('/reflection', methods=['POST'])
 def reflect():
     try:
         error = checkImage(request)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
     
         error = checkParam(request, "option", True)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         option = int(request.form['option'])
         if option<0 or option>1:
-            return jsonify({'Error': 'Invalid option value'})
+            return bad_request('Invalid option value')
 
         maxProcsNumber = getMaxProcsNumber(request)
         error = verification(maxProcsNumber)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         file = request.files['file']
         INPicture = Image.open(file.stream)
@@ -200,42 +203,42 @@ def reflect():
 
         return result
     except:
-        return jsonify({'Error': 'Server error'})
+        return bad_request('Server error')
 
 @app.route('/filter/<string:operation_name>', methods=['POST'])
 def filter(operation_name):
     try:
         if (operation_name != "RGBSelection") and (operation_name != "brightness") and (operation_name != "contrast") and (operation_name != "gamma") and (operation_name != "negative") and (operation_name != "shadesOfGrey"):
-            return not_found(404)
+            return bad_request("")
 
         error = checkImage(request)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
     
         option = None
 
         if (operation_name == "RGBSelection") or (operation_name == "brightness"):
             error = checkParam(request, "option", True)
             if error != '':
-                return jsonify({'Error': error})
+                return bad_request(error)
             option = int(request.form['option'])
             if (operation_name == "RGBSelection") and (option<0 or option>2):
-                return jsonify({'Error': 'Invalid option value'})
+                return bad_request('Invalid option value')
             if (operation_name == "brightness") and (option<-255 or option>255):
-                return jsonify({'Error': 'Invalid option value'})
+                return bad_request('Invalid option value')
 
         if (operation_name == "contrast") or (operation_name == "gamma"):
             error = checkParam(request, "option", False)
             if error != '':
-                return jsonify({'Error': error})
+                return bad_request(error)
             option = float(request.form['option'])
             if option<0.1 or option>10:
-                return jsonify({'Error': 'Invalid option value'})
+                return bad_request('Invalid option value')
 
         maxProcsNumber = getMaxProcsNumber(request)
         error = verification(maxProcsNumber)
         if error != '':
-            return jsonify({'Error': error})
+            return bad_request(error)
 
         file = request.files['file']
         INPicture = Image.open(file.stream)
@@ -259,7 +262,7 @@ def filter(operation_name):
 
         return result
     except:
-        return jsonify({'Error': 'Server error'})
+        return bad_request('Server error')
 
 from netifaces import interfaces, ifaddresses, AF_INET
 
