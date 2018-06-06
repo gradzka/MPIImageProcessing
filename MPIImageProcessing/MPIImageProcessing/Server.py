@@ -84,11 +84,14 @@ def getMaxProcsNumber(request):
             maxProcsNumber = 1
     return maxProcsNumber
 
+def getExecutableWithoutPrefix():
+    return sys.executable.replace(sys.exec_prefix,"")[1:]
+
 def verification(maxProcsNumber):
     numberOfProcesses = 0;
     for pid in psutil.pids():
         p = psutil.Process(pid)
-        if p.name() == "python.exe" and len(p.cmdline()) > 1 and "MPIImageProcessing.py" in p.cmdline()[1]:
+        if p.name() == getExecutableWithoutPrefix() and len(p.cmdline()) > 1 and "MPIImageProcessing.py" in p.cmdline()[1]:
             numberOfProcesses+=1
     if (maxProcsNumber+numberOfProcesses) > 64:
         return 'Server is busy'
@@ -113,7 +116,7 @@ def histogram():
         ext = getExtension(file.filename)
         path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
         INPicture.save(path)
-        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "histogram", str(maxProcsNumber)])
+        subprocess.call(["mpiexec", "-n", "1", getExecutableWithoutPrefix(), "Worker.py", path, "histogram", str(maxProcsNumber)])
 
         deleteFile(path)
         file = open("OUT_" + path + ".json", "r") 
@@ -152,7 +155,7 @@ def rotate():
         ext = getExtension(file.filename)
         path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
         INPicture.save(path)
-        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "rotation", str(maxProcsNumber), str(option)])
+        subprocess.call(["mpiexec", "-n", "1", getExecutableWithoutPrefix(), "Worker.py", path, "rotation", str(maxProcsNumber), str(option)])
         deleteFile(path)
         OUTPicture = Image.open("OUT_" + path)
 
@@ -191,7 +194,7 @@ def reflect():
         ext = getExtension(file.filename)
         path = (file.filename + str(request.environ['REMOTE_ADDR']) + str(datetime.datetime.now())).replace(":","").replace(".","") + "." + ext
         INPicture.save(path)
-        subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, "mirrorReflection", str(maxProcsNumber), str(option)])
+        subprocess.call(["mpiexec", "-n", "1", getExecutableWithoutPrefix(), "Worker.py", path, "mirrorReflection", str(maxProcsNumber), str(option)])
         
         deleteFile(path)
         OUTPicture = Image.open("OUT_" + path)
@@ -248,9 +251,9 @@ def filter(operation_name):
         INPicture.save(path)
 
         if (operation_name == "RGBSelection") or (operation_name == "brightness") or (operation_name == "contrast") or (operation_name == "gamma"):
-            subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, operation_name, str(maxProcsNumber), str(option)])
+            subprocess.call(["mpiexec", "-n", "1", getExecutableWithoutPrefix(), "Worker.py", path, operation_name, str(maxProcsNumber), str(option)])
         else:
-            subprocess.call(["mpiexec", "-n", "1", "python", "Worker.py", path, operation_name, str(maxProcsNumber)])
+            subprocess.call(["mpiexec", "-n", "1", getExecutableWithoutPrefix(), "Worker.py", path, operation_name, str(maxProcsNumber)])
         
         deleteFile(path)
         OUTPicture = Image.open("OUT_" + path)
