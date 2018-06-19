@@ -2,6 +2,8 @@ from mpi4py import MPI
 import numpy
 import ImageProcessing as ImageProc
 from PIL import Image
+import ReductionProcess
+
 
 comm = MPI.Comm.Get_parent()
 size = comm.Get_size()
@@ -34,6 +36,7 @@ if operation_name == "histogram":
     histogram = comm.reduce(histogram, op=my_op, root=0)
 else: 
     my_op = MPI.Op.Create(ImageProc.my_sum)
-    OUTPicture=comm.reduce(OUTPicture, op=my_op, root=0)
+    reductProc = ReductionProcess.ReductionProcess(rank, size,OUTPicture)
+    reductProc=comm.reduce(reductProc, op=my_op, root=0)
 
 comm.Disconnect()

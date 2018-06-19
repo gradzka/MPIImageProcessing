@@ -5,16 +5,19 @@ from PIL import Image
 import math
 import copy
 
-def my_sum(INPicture, OUTPicture, mpi_datatype):    
-    for iterJ in range (0, INPicture.height):
-        for iterI in range (0, INPicture.width):
-            pixelIN = INPicture.getpixel((iterI,iterJ))
-            pixelOUT = OUTPicture.getpixel((iterI,iterJ))
-            R = min(255, pixelIN[0]+pixelOUT[0])
-            G = min(255, pixelIN[1]+pixelOUT[1])
-            B = min(255, pixelIN[2]+pixelOUT[2])
-            OUTPicture.putpixel((iterI,iterJ),(R,G,B))
-    return OUTPicture
+def my_sum(red_proc1, red_proc2, mpi_datatype):
+    for rank in red_proc2.completedRanks:
+        proc2_first = int((rank * red_proc2.picture.height) / red_proc2.size)
+        proc2_last = int(((rank+1) * red_proc2.picture.height) / red_proc2.size)
+        for iterJ in range (proc2_first, proc2_last):
+            for iterI in range (0, red_proc1.picture.width):
+                pixelOUT = red_proc2.picture.getpixel((iterI,iterJ))
+                R = pixelOUT[0]
+                G = pixelOUT[1]
+                B = pixelOUT[2]
+                red_proc1.picture.putpixel((iterI,iterJ),(R,G,B))
+        red_proc1.addToCompletedRanks(rank)
+    return red_proc1
 
 def my_histogram_sum(histogram1, histogram2, mpi_datatype):
     histogram = {"R":[0]*256, "G":[0]*256, "B":[0]*256}

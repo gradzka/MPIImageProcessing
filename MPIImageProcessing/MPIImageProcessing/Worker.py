@@ -3,6 +3,7 @@ import ImageProcessing as ImageProc
 from PIL import Image
 import sys
 import json
+import ReductionProcess
 
 
 def Work():
@@ -52,9 +53,10 @@ def Work():
                         file.write(serializedHistogram)
                 else: 
                     OUTPicture = None
+                    reductProc = ReductionProcess.ReductionProcess(None, None,None)
                     my_op = MPI.Op.Create(ImageProc.my_sum)
-                    OUTPicture=comm.reduce(None, op=my_op, root=MPI.ROOT)
-                    OUTPicture.save("OUT_"+sys.argv[1])
+                    reductProc = comm.reduce(None, op=my_op, root=MPI.ROOT)
+                    reductProc.picture.save("OUT_"+sys.argv[1])
                 comm.Disconnect()
     except Exception as e:
         print("error: {0}".format(e))

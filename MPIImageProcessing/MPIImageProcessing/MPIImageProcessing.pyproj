@@ -25,6 +25,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="MPIImageProcessing.py" />
+    <Compile Include="ReductionProcess.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="Server.py">
       <SubType>Code</SubType>
     </Compile>
